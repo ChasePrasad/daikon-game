@@ -1,36 +1,40 @@
 import { Bodies, Body, Engine, Events, Render, Runner, World } from "matter-js";
-import { FRUITS } from "./fruits";
+import { VEGETABLES } from "./vegetables";
 
-const engine = Engine.create();
+const lineColor = "#ff6961";
+const engine = Engine.create({
+  positionIterations: 20,
+  velocityIterations: 20
+});
 const render = Render.create({
   engine,
   element: document.body,
   options: {
     wireframes: false,
-    background: "#f7f4c8",
+    background: "#ffd1dc",
     width: 620,
     height: 850
   }
 });
 const world = engine.world;
 
-const leftWall = Bodies.rectangle(15, 395, 30, 820, {
+const leftWall = Bodies.rectangle(15, 395, 30, 910, {
   isStatic: true,
-  render: { fillStyle: "#e6b143" },
+  render: { fillStyle: lineColor },
 });
-const rightWall = Bodies.rectangle(605, 395, 30, 820, {
+const rightWall = Bodies.rectangle(605, 395, 30, 910, {
   isStatic: true,
-  render: { fillStyle: "#e6b143" },
+  render: { fillStyle: lineColor },
 });
-const ground = Bodies.rectangle(310, 820, 620, 30, {
+const ground = Bodies.rectangle(310, 835, 620, 30, {
   isStatic: true,
-  render: { fillStyle: "#e6b143" },
+  render: { fillStyle: lineColor },
 });
 const topLine = Bodies.rectangle(310, 150, 620, 30, {
-  name: "topLine",
+  label: "topLine",
   isStatic: true,
   isSensor: true,
-  render: { fillStyle: "#e6b143" },
+  render: { fillStyle: lineColor },
 });
 
 World.add(world, [leftWall, rightWall, ground, topLine]);
@@ -39,25 +43,25 @@ Render.run(render);
 Runner.run(engine);
 
 let currentBody = null;
-let currentFruit = null;
+let currentVegetable = null;
 let disableAction = false;
 let interval = null;
 let gameEnd = false;
 
-function addFruit() {
-  const index = Math.floor(Math.random() * 5);
-  const fruit = FRUITS[index];
-  const body = Bodies.circle(300, 50, fruit.radius, {
+function addVegetable() {
+  const index = Math.floor(Math.random() * 3);
+  const vegetable = VEGETABLES[index];
+  const body = Bodies.circle(300, 70, vegetable.radius, {
     index: index,
     isSleeping: true,
     render: {
-      sprite: { texture: `${fruit.label}.png` }
+      sprite: { texture: `${vegetable.label}.png` }
     },
     restitution: 0.5
   });
 
   currentBody = body;
-  currentFruit = fruit;
+  currentVegetable = vegetable;
 
   World.add(world, body);
 }
@@ -74,9 +78,9 @@ window.onkeydown = (event) => {
         return;
 
       interval = setInterval(() => {
-        if (currentBody.position.x - currentFruit.radius > 40)
+        if (currentBody.position.x - currentVegetable.radius > 40)
           Body.setPosition(currentBody, {
-            x: currentBody.position.x - 1,
+            x: currentBody.position.x - 2,
             y: currentBody.position.y
           });
       }, 5);
@@ -89,9 +93,9 @@ window.onkeydown = (event) => {
         return;
 
       interval = setInterval(() => {
-        if (currentBody.position.x + currentFruit.radius < 580)
+        if (currentBody.position.x + currentVegetable.radius < 580)
           Body.setPosition(currentBody, {
-            x: currentBody.position.x + 1,
+            x: currentBody.position.x + 2,
             y: currentBody.position.y
           });
       }, 5);
@@ -103,7 +107,7 @@ window.onkeydown = (event) => {
       currentBody.isSleeping = false;
       disableAction = true;
       setTimeout(() => {
-        addFruit();
+        addVegetable();
         disableAction = false;
       }, 1000);
 
@@ -126,33 +130,38 @@ Events.on(engine, "collisionStart", (event) => {
   event.pairs.forEach((collision) => {
     if (!gameEnd && (collision.bodyA.index === collision.bodyB.index)) {
       const index = collision.bodyA.index;
+      const collisionSound = new Audio("plop.flac");
 
-      if (index === FRUITS.length - 1) {
+      if (index === VEGETABLES.length - 1) {
         return;
       }
 
+      collisionSound.play();
       World.remove(world, [collision.bodyA, collision.bodyB]);
 
-      const newFruit = FRUITS[index + 1];
+      const newVegetable = VEGETABLES[index + 1];
       const newBody = Bodies.circle(
         collision.collision.supports[0].x,
         collision.collision.supports[0].y,
-        newFruit.radius,
+        newVegetable.radius,
         {
           render: {
-            sprite: { texture: `${newFruit.label}.png` }
+            sprite: { texture: `${newVegetable.label}.png` }
           },
           index: index + 1
         }
       );
 
       World.add(world, newBody);
-    }
 
-    if (!disableAction && (collision.bodyA.name === "topLine" || collision.bodyB.name === "topLine")) {
-      alert("Game over :( (Refresh the Page to Restart");
-    } else if (newBody.index === 10) {
-      endGame("You win! (Refresh the Page to Restart)");
+      if (newBody.index === 9) {
+        setTimeout(() => {
+          endGame("You win :) (Refresh the Page to Restart)");
+        }, 500);
+      }
+    }
+    if (!disableAction && (collision.bodyA.label === "topLine" || collision.bodyB.label === "topLine")) {
+      endGame("Game over :( (Refresh the Page to Restart");
     }
   });
 });
@@ -162,4 +171,4 @@ function endGame(message) {
   gameEnd = true;
 }
 
-addFruit();
+addVegetable();
